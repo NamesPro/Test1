@@ -843,3 +843,4 @@ function Library:CreateWindow(title)
     
     return Tabs
 end
+return Library
