@@ -1,12 +1,17 @@
---// POTATO UI V4.8 (CLASSIC STYLE + STABLE PICKER + CONFIG TAB) - NO BAN VERSION
+--// POTATO UI V4.8 (gethui VERSION - ИГРА НЕ ВИДИТ)
 local UIS = game:GetService("UserInputService")
 local CoreGui = game:GetService("CoreGui")
 local Player = game:GetService("Players").LocalPlayer
 local HttpService = game:GetService("HttpService")
 
+-- Получаем безопасное хранилище GUI
+local HiddenGui = gethui and gethui() or CoreGui
+
 -- Удаление старых версий
-for _, v in pairs(CoreGui:GetChildren()) do
-    if v.Name == "Potato_V4" or v.Name == "PotatoToggleUI" then v:Destroy() end
+for _, v in pairs(HiddenGui:GetChildren()) do
+    if v.Name == "Potato_V4" or v.Name == "PotatoToggleUI" then 
+        v:Destroy() 
+    end
 end
 
 local function Corner(obj, r)
@@ -80,12 +85,12 @@ local IsPickerOpen = false
 function Library:CreateWindow(title)
     local UI = Instance.new("ScreenGui")
     UI.Name = "Potato_V4"
-    UI.Parent = CoreGui
+    UI.Parent = HiddenGui
     UI.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
     local ToggleScreen = Instance.new("ScreenGui")
     ToggleScreen.Name = "PotatoToggleUI"
-    ToggleScreen.Parent = CoreGui
+    ToggleScreen.Parent = HiddenGui
     
     local OpenBtn = Instance.new("TextButton")
     OpenBtn.Parent = ToggleScreen
@@ -240,7 +245,7 @@ function Library:CreateWindow(title)
         local Elements = {}
         local elementStorage = {}
 
-        -- COLOR PICKER (БЕЗОПАСНАЯ ВЕРСИЯ - БЕЗ UISTROKE, БЕЗ CAMERABLOCKER, НИЗКИЙ ZINDEX)
+        -- COLOR PICKER (БЕЗОПАСНАЯ ВЕРСИЯ - ЧЕРЕЗ gethui)
         function Elements:CreateColor(text, default, callback)
             local h, s, v = default:ToHSV()
             local elementData = {name = text, value = {h = h, s = s, v = v}}
@@ -269,13 +274,12 @@ function Library:CreateWindow(title)
             Corner(Box, 4)
 
             local Picker = Instance.new("Frame")
-            Picker.Parent = UI
+            Picker.Parent = HiddenGui
             Picker.Size = UDim2.fromOffset(190, 230)
             Picker.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
             Picker.Visible = false
-            Picker.ZIndex = 1  -- НИЗКИЙ ZIndex, НЕ БАНИТ
+            Picker.ZIndex = 1
             Corner(Picker, 10)
-            -- UIStroke УДАЛЕН
 
             local Sat = Instance.new("ImageLabel", Picker)
             Sat.Size = UDim2.fromOffset(140, 130)
@@ -380,7 +384,6 @@ function Library:CreateWindow(title)
                 phue = false 
             end)
 
-            -- Закрытие пикера при клике вне его
             UIS.InputBegan:Connect(function(input)
                 if IsPickerOpen and Picker.Visible and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
                     local pos = input.Position
@@ -409,7 +412,7 @@ function Library:CreateWindow(title)
             table.insert(elementStorage, elementData)
         end
 
-        -- TOGGLE (БЕЗ TWEEN)
+        -- TOGGLE
         function Elements:CreateToggle(text, callback)
             local enabled = false
             local elementData = {name = text, value = enabled}
@@ -563,7 +566,7 @@ function Library:CreateWindow(title)
             Lbl.TextXAlignment = Enum.TextXAlignment.Left
         end
 
-        -- DROPDOWN (БЕЗ TWEEN, БЕЗ UISTROKE)
+        -- DROPDOWN
         function Elements:CreateDropdown(text, list, callback)
             local selected = list[1] or ""
             local dropOpen = false
@@ -592,13 +595,12 @@ function Library:CreateWindow(title)
             Arrow.TextSize = 14
             
             local DropList = Instance.new("Frame")
-            DropList.Parent = UI
+            DropList.Parent = HiddenGui
             DropList.Size = UDim2.fromOffset(250, 0)
             DropList.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
             DropList.Visible = false
-            DropList.ZIndex = 1  -- НИЗКИЙ ZIndex
+            DropList.ZIndex = 1
             Corner(DropList, 8)
-            -- UIStroke УДАЛЕН
             
             local ScrollFrame = Instance.new("ScrollingFrame", DropList)
             ScrollFrame.Size = UDim2.new(1, -10, 1, -10)
@@ -639,7 +641,6 @@ function Library:CreateWindow(title)
                         updateList()
                     end)
                     
-                    -- БЕЗ TWEEN
                     ItemBtn.MouseEnter:Connect(function()
                         if selected ~= item then
                             ItemBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
@@ -738,13 +739,12 @@ function Library:CreateWindow(title)
             
             Elements:CreateButton("Save Config", function()
                 local inputFrame = Instance.new("Frame")
-                inputFrame.Parent = UI
+                inputFrame.Parent = HiddenGui
                 inputFrame.Size = UDim2.fromOffset(250, 100)
                 inputFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
                 inputFrame.Position = UDim2.new(0.5, -125, 0.5, -50)
-                inputFrame.ZIndex = 1  -- НИЗКИЙ ZIndex
+                inputFrame.ZIndex = 1
                 Corner(inputFrame, 8)
-                -- UIStroke УДАЛЕН
                 
                 local title = Instance.new("TextLabel", inputFrame)
                 title.Size = UDim2.new(1, 0, 0, 25)
@@ -823,4 +823,3 @@ function Library:CreateWindow(title)
     return Tabs
 end
 return Library
--- neww
