@@ -1,16 +1,16 @@
---// POTATO UI V4.8 (DRAWING COLOR PICKER - НЕ БАНИТ)
+--// POTATO UI V4.8 (CLASSIC STYLE + STABLE PICKER + CONFIG TAB + INPUT)
 local UIS = game:GetService("UserInputService")
+local TS = game:GetService("TweenService")
 local CoreGui = game:GetService("CoreGui")
 local Player = game:GetService("Players").LocalPlayer
 local HttpService = game:GetService("HttpService")
-local RunService = game:GetService("RunService")
 
-local HiddenGui = gethui and gethui() or CoreGui
+for _, v in pairs(CoreGui:GetChildren()) do
+    if v.Name == "Potato_V4" or v.Name == "PotatoToggleUI" then v:Destroy() end
+end
 
-for _, v in pairs(HiddenGui:GetChildren()) do
-    if v.Name == "Potato_V4" or v.Name == "PotatoToggleUI" then 
-        v:Destroy() 
-    end
+local function Tween(obj, t, props)
+    TS:Create(obj, TweenInfo.new(t, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), props):Play()
 end
 
 local function Corner(obj, r)
@@ -19,7 +19,6 @@ local function Corner(obj, r)
     c.Parent = obj
 end
 
--- СИСТЕМА КОНФИГОВ
 local ConfigManager = {}
 ConfigManager.Configs = {}
 ConfigManager.CurrentConfig = "default"
@@ -34,34 +33,28 @@ function ConfigManager:SaveConfig(name)
     end
     self.Configs[name] = config
     self.CurrentConfig = name
-    
     pcall(function()
         writefile("PotatoUI_Configs.json", HttpService:JSONEncode(self.Configs))
     end)
-    
     return true
 end
 
 function ConfigManager:LoadConfig(name)
     local config = self.Configs[name]
     if not config then return false end
-    
     self.CurrentConfig = name
     for _, callback in pairs(self.LoadCallbacks) do
         callback(config)
     end
-    
     return true
 end
 
 function ConfigManager:DeleteConfig(name)
     if name == "default" then return false end
     self.Configs[name] = nil
-    
     pcall(function()
         writefile("PotatoUI_Configs.json", HttpService:JSONEncode(self.Configs))
     end)
-    
     return true
 end
 
@@ -80,249 +73,16 @@ ConfigManager.LoadCallbacks = {}
 
 local Library = {}
 local IsPickerOpen = false
-local CurrentPickerItem = nil
-local CurrentPickerCallback = nil
-
--- DRAWING COLOR PICKER (БЕЗ UserInputService хуков)
-local DrawingColorPicker = {}
-local pickerObjects = {}
-local pickerVisible = false
-local currentHue = 0
-local currentSat = 1
-local currentVal = 1
-local pickingSat = false
-local pickingHue = false
-
-function DrawingColorPicker:Open(x, y, defaultColor, callback)
-    if pickerVisible then
-        self:Close()
-    end
-    
-    local h, s, v = defaultColor:ToHSV()
-    currentHue = h
-    currentSat = s
-    currentVal = v
-    
-    pickerVisible = true
-    CurrentPickerCallback = callback
-    
-    -- Создаем оверлей для закрытия
-    local overlay = Drawing.new("Square")
-    overlay.Position = Vector2.new(0, 0)
-    overlay.Size = Vector2.new(1920, 1080)
-    overlay.Color = Color3.new(0, 0, 0)
-    overlay.Transparency = 0.5
-    overlay.Visible = true
-    overlay.ZIndex = 1000
-    pickerObjects.overlay = overlay
-    
-    -- Фон пикера
-    local bg = Drawing.new("Square")
-    bg.Position = Vector2.new(x, y)
-    bg.Size = Vector2.new(200, 250)
-    bg.Color = Color3.new(0.1, 0.1, 0.1)
-    bg.Transparency = 0.9
-    bg.Visible = true
-    bg.ZIndex = 1001
-    pickerObjects.bg = bg
-    
-    -- Граница
-    local border = Drawing.new("Square")
-    border.Position = Vector2.new(x - 1, y - 1)
-    border.Size = Vector2.new(202, 252)
-    border.Color = Color3.new(0.2, 0.2, 0.2)
-    border.Thickness = 1
-    border.Filled = false
-    border.Visible = true
-    border.ZIndex = 1000
-    pickerObjects.border = border
-    
-    -- Поле насыщенности/яркости
-    local satBg = Drawing.new("Square")
-    satBg.Position = Vector2.new(x + 10, y + 10)
-    satBg.Size = Vector2.new(140, 140)
-    satBg.Color = Color3.fromHSV(currentHue, 1, 1)
-    satBg.Visible = true
-    satBg.ZIndex = 1002
-    pickerObjects.satBg = satBg
-    
-    -- Круг для выбора цвета на поле
-    local satPicker = Drawing.new("Circle")
-    satPicker.Position = Vector2.new(x + 10 + currentSat * 140, y + 10 + (1 - currentVal) * 140)
-    satPicker.Radius = 6
-    satPicker.Color = Color3.new(1, 1, 1)
-    satPicker.Thickness = 2
-    satPicker.Filled = false
-    satPicker.Visible = true
-    satPicker.ZIndex = 1003
-    pickerObjects.satPicker = satPicker
-    
-    -- Ползунок оттенка
-    local hueBar = Drawing.new("Square")
-    hueBar.Position = Vector2.new(x + 160, y + 10)
-    hueBar.Size = Vector2.new(20, 140)
-    hueBar.Visible = true
-    hueBar.ZIndex = 1002
-    pickerObjects.hueBar = hueBar
-    
-    -- Обновляем градиент оттенка
-    for i = 0, 140 do
-        local line = Drawing.new("Line")
-        line.From = Vector2.new(x + 160, y + 10 + i)
-        line.To = Vector2.new(x + 180, y + 10 + i)
-        line.Color = Color3.fromHSV(1 - (i / 140), 1, 1)
-        line.Thickness = 1
-        line.Visible = true
-        line.ZIndex = 1002
-        table.insert(pickerObjects.hueLines, line)
-    end
-    
-    -- Ползунок оттенка
-    local huePicker = Drawing.new("Square")
-    huePicker.Position = Vector2.new(x + 155, y + 10 + (1 - currentHue) * 140 - 5)
-    huePicker.Size = Vector2.new(30, 10)
-    huePicker.Color = Color3.new(1, 1, 1)
-    huePicker.Filled = true
-    huePicker.Visible = true
-    huePicker.ZIndex = 1003
-    pickerObjects.huePicker = huePicker
-    
-    -- Текстовый ввод RGB
-    local rgbText = Drawing.new("Text")
-    rgbText.Position = Vector2.new(x + 10, y + 160)
-    rgbText.Text = string.format("%.0f, %.0f, %.0f", defaultColor.R * 255, defaultColor.G * 255, defaultColor.B * 255)
-    rgbText.Color = Color3.new(1, 1, 1)
-    rgbText.Size = 12
-    rgbText.Center = false
-    rgbText.Visible = true
-    rgbText.ZIndex = 1002
-    pickerObjects.rgbText = rgbText
-    
-    -- Предпросмотр цвета
-    local preview = Drawing.new("Square")
-    preview.Position = Vector2.new(x + 150, y + 160)
-    preview.Size = Vector2.new(40, 40)
-    preview.Color = defaultColor
-    preview.Visible = true
-    preview.ZIndex = 1002
-    pickerObjects.preview = preview
-    
-    -- Кнопка Apply
-    local applyBtn = Drawing.new("Square")
-    applyBtn.Position = Vector2.new(x + 10, y + 200)
-    applyBtn.Size = Vector2.new(180, 30)
-    applyBtn.Color = Color3.new(0.2, 0.4, 0.8)
-    applyBtn.Visible = true
-    applyBtn.ZIndex = 1002
-    pickerObjects.applyBtn = applyBtn
-    
-    local applyText = Drawing.new("Text")
-    applyText.Position = Vector2.new(x + 100, y + 215)
-    applyText.Text = "APPLY"
-    applyText.Color = Color3.new(1, 1, 1)
-    applyText.Size = 14
-    applyText.Center = true
-    applyText.Visible = true
-    applyText.ZIndex = 1003
-    pickerObjects.applyText = applyText
-    
-    -- Обновляем callback при изменении
-    local function updateColor()
-        local color = Color3.fromHSV(currentHue, currentSat, currentVal)
-        satBg.Color = Color3.fromHSV(currentHue, 1, 1)
-        preview.Color = color
-        rgbText.Text = string.format("%.0f, %.0f, %.0f", color.R * 255, color.G * 255, color.B * 255)
-        if CurrentPickerCallback then
-            CurrentPickerCallback(color)
-        end
-    end
-    
-    -- Обновляем ползунки
-    pickerObjects.updateSatPicker = function()
-        satPicker.Position = Vector2.new(x + 10 + currentSat * 140, y + 10 + (1 - currentVal) * 140)
-        updateColor()
-    end
-    
-    pickerObjects.updateHuePicker = function()
-        huePicker.Position = Vector2.new(x + 155, y + 10 + (1 - currentHue) * 140 - 5)
-        satBg.Color = Color3.fromHSV(currentHue, 1, 1)
-        updateColor()
-    end
-    
-    pickerObjects.updateSatPicker()
-    pickerObjects.updateHuePicker()
-    
-    -- Обработка кликов через отдельный поток (не через UserInputService)
-    spawn(function()
-        while pickerVisible do
-            local mousePos = UIS:GetMouseLocation()
-            local mouseDown = UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton1)
-            
-            if mouseDown then
-                -- Проверка клика на Apply
-                if mousePos.X >= x + 10 and mousePos.X <= x + 190 and
-                   mousePos.Y >= y + 200 and mousePos.Y <= y + 230 then
-                    DrawingColorPicker:Close()
-                    break
-                end
-                
-                -- Проверка на поле насыщенности
-                if mousePos.X >= x + 10 and mousePos.X <= x + 150 and
-                   mousePos.Y >= y + 10 and mousePos.Y <= y + 150 then
-                    local satX = math.clamp((mousePos.X - (x + 10)) / 140, 0, 1)
-                    local satY = math.clamp((mousePos.Y - (y + 10)) / 140, 0, 1)
-                    currentSat = satX
-                    currentVal = 1 - satY
-                    pickerObjects.updateSatPicker()
-                end
-                
-                -- Проверка на ползунок оттенка
-                if mousePos.X >= x + 160 and mousePos.X <= x + 180 and
-                   mousePos.Y >= y + 10 and mousePos.Y <= y + 150 then
-                    currentHue = 1 - math.clamp((mousePos.Y - (y + 10)) / 140, 0, 1)
-                    pickerObjects.updateHuePicker()
-                end
-            end
-            
-            -- Проверка закрытия по клику вне пикера
-            if mouseDown and not pickingSat and not pickingHue then
-                if mousePos.X < x or mousePos.X > x + 200 or mousePos.Y < y or mousePos.Y > y + 250 then
-                    DrawingColorPicker:Close()
-                    break
-                end
-            end
-            
-            RunService.RenderStepped:Wait()
-        end
-    end)
-    
-    updateColor()
-end
-
-function DrawingColorPicker:Close()
-    for name, obj in pairs(pickerObjects) do
-        if type(name) ~= "function" and obj then
-            pcall(function() obj:Remove() end)
-        end
-    end
-    for _, line in pairs(pickerObjects.hueLines or {}) do
-        pcall(function() line:Remove() end)
-    end
-    pickerObjects = {hueLines = {}}
-    pickerVisible = false
-    CurrentPickerCallback = nil
-    IsPickerOpen = false
-end
 
 function Library:CreateWindow(title)
     local UI = Instance.new("ScreenGui")
     UI.Name = "Potato_V4"
-    UI.Parent = HiddenGui
+    UI.Parent = CoreGui
     UI.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-
+    
     local ToggleScreen = Instance.new("ScreenGui")
     ToggleScreen.Name = "PotatoToggleUI"
-    ToggleScreen.Parent = HiddenGui
+    ToggleScreen.Parent = CoreGui
     
     local OpenBtn = Instance.new("TextButton")
     OpenBtn.Parent = ToggleScreen
@@ -370,30 +130,25 @@ function Library:CreateWindow(title)
     CloseBtn.TextSize = 22
     
     CloseBtn.MouseButton1Click:Connect(function()
-        if not IsPickerOpen then
-            Main.Visible = false
-            OpenBtn.Visible = true
-        end
+        Main.Visible = false
+        OpenBtn.Visible = true
     end)
     
     OpenBtn.MouseButton1Click:Connect(function()
-        if not IsPickerOpen then
-            Main.Visible = true
-            OpenBtn.Visible = false
-        end
+        Main.Visible = true
+        OpenBtn.Visible = false
     end)
 
-    -- DRAG LOGIC
     local dragging, dragStart, startPos
     Header.InputBegan:Connect(function(input)
-        if not IsPickerOpen and input.UserInputType == Enum.UserInputType.MouseButton1 then
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = true
             dragStart = input.Position
             startPos = Main.Position
         end
     end)
     UIS.InputChanged:Connect(function(input)
-        if dragging and not IsPickerOpen and input.UserInputType == Enum.UserInputType.MouseMovement then
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
             local delta = input.Position - dragStart
             Main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
         end
@@ -447,23 +202,19 @@ function Library:CreateWindow(title)
         Corner(TabBtn, 6)
 
         TabBtn.MouseButton1Click:Connect(function()
-            if not IsPickerOpen then
-                for _, p in pairs(Container:GetChildren()) do 
-                    if p:IsA("ScrollingFrame") then 
-                        p.Visible = false 
-                    end 
-                end
-                for _, b in pairs(Sidebar:GetChildren()) do 
-                    if b:IsA("TextButton") then 
-                        b.TextColor3 = Color3.fromRGB(150, 150, 150) 
-                        b.BackgroundColor3 = Color3.fromRGB(22, 22, 22) 
-                    end 
-                end
-                Page.Visible = true
-                TabBtn.TextColor3 = Color3.new(1, 1, 1)
-                TabBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-                Page.CanvasPosition = Vector2.new(0, 0)
+            for _, p in pairs(Container:GetChildren()) do 
+                if p:IsA("ScrollingFrame") then p.Visible = false end 
             end
+            for _, b in pairs(Sidebar:GetChildren()) do 
+                if b:IsA("TextButton") then 
+                    b.TextColor3 = Color3.fromRGB(150, 150, 150) 
+                    b.BackgroundColor3 = Color3.fromRGB(22, 22, 22) 
+                end 
+            end
+            Page.Visible = true
+            TabBtn.TextColor3 = Color3.new(1, 1, 1)
+            TabBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+            Page.CanvasPosition = Vector2.new(0, 0)
         end)
 
         if Tabs.First then 
@@ -474,70 +225,6 @@ function Library:CreateWindow(title)
         end
 
         local Elements = {}
-        local elementStorage = {}
-
-        -- COLOR PICKER через Drawing (НЕ БАНИТ)
-        function Elements:CreateColor(text, default, callback)
-            local currentColor = default
-            local elementData = {name = text, value = {R = default.R, G = default.G, B = default.B}}
-            
-            local Item = Instance.new("TextButton")
-            Item.Parent = Page
-            Item.Size = UDim2.new(1, -5, 0, 35)
-            Item.BackgroundColor3 = Color3.fromRGB(22, 22, 22)
-            Item.Text = ""
-            Corner(Item, 6)
-
-            local Lbl = Instance.new("TextLabel", Item)
-            Lbl.Size = UDim2.new(1, -50, 1, 0)
-            Lbl.Position = UDim2.new(0, 10, 0, 0)
-            Lbl.BackgroundTransparency = 1
-            Lbl.Text = text
-            Lbl.TextColor3 = Color3.new(1, 1, 1)
-            Lbl.Font = Enum.Font.Gotham
-            Lbl.TextSize = 11
-            Lbl.TextXAlignment = Enum.TextXAlignment.Left
-
-            local Box = Instance.new("Frame", Item)
-            Box.Size = UDim2.fromOffset(20, 20)
-            Box.Position = UDim2.new(1, -35, 0.5, -10)
-            Box.BackgroundColor3 = default
-            Corner(Box, 4)
-
-            Item.MouseButton1Click:Connect(function()
-                if not IsPickerOpen then
-                    IsPickerOpen = true
-                    local absPos = Item.AbsolutePosition
-                    DrawingColorPicker:Open(
-                        absPos.X + 230,
-                        absPos.Y - 100,
-                        currentColor,
-                        function(color)
-                            currentColor = color
-                            Box.BackgroundColor3 = color
-                            elementData.value = {R = color.R, G = color.G, B = color.B}
-                            callback(color)
-                        end
-                    )
-                end
-            end)
-
-            table.insert(ConfigManager.Callbacks, function()
-                return {name = text, value = elementData.value}
-            end)
-            table.insert(ConfigManager.LoadCallbacks, function(config)
-                local data = config[text]
-                if data then
-                    local color = Color3.new(data.R, data.G, data.B)
-                    currentColor = color
-                    Box.BackgroundColor3 = color
-                    elementData.value = {R = color.R, G = color.G, B = color.B}
-                    callback(color)
-                end
-            end)
-
-            table.insert(elementStorage, elementData)
-        end
 
         -- TOGGLE
         function Elements:CreateToggle(text, callback)
@@ -567,12 +254,10 @@ function Library:CreateWindow(title)
             Corner(Check, 4)
             
             Item.MouseButton1Click:Connect(function()
-                if not IsPickerOpen then
-                    enabled = not enabled
-                    elementData.value = enabled
-                    Check.BackgroundColor3 = enabled and Color3.fromRGB(0, 150, 255) or Color3.fromRGB(40, 40, 40)
-                    callback(enabled)
-                end
+                enabled = not enabled
+                elementData.value = enabled
+                Tween(Check, 0.2, {BackgroundColor3 = enabled and Color3.fromRGB(0, 150, 255) or Color3.fromRGB(40, 40, 40)})
+                callback(enabled)
             end)
 
             table.insert(ConfigManager.Callbacks, function()
@@ -587,8 +272,6 @@ function Library:CreateWindow(title)
                     callback(enabled)
                 end
             end)
-
-            table.insert(elementStorage, elementData)
         end
 
         -- SLIDER
@@ -634,14 +317,12 @@ function Library:CreateWindow(title)
             
             local sliding = false
             SFrame.InputBegan:Connect(function(i) 
-                if not IsPickerOpen and i.UserInputType == Enum.UserInputType.MouseButton1 then 
+                if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then 
                     sliding = true up(i) 
                 end 
             end)
             UIS.InputChanged:Connect(function(i) 
-                if sliding and not IsPickerOpen and i.UserInputType == Enum.UserInputType.MouseMovement then 
-                    up(i) 
-                end 
+                if sliding and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then up(i) end 
             end)
             UIS.InputEnded:Connect(function() sliding = false end)
 
@@ -659,8 +340,6 @@ function Library:CreateWindow(title)
                     callback(data)
                 end
             end)
-
-            table.insert(elementStorage, elementData)
         end
 
         -- BUTTON
@@ -674,11 +353,7 @@ function Library:CreateWindow(title)
             Btn.TextSize = 11
             Corner(Btn, 6)
             
-            Btn.MouseButton1Click:Connect(function()
-                if not IsPickerOpen then
-                    callback()
-                end
-            end)
+            Btn.MouseButton1Click:Connect(function() callback() end)
         end
 
         -- LABEL
@@ -693,10 +368,58 @@ function Library:CreateWindow(title)
             Lbl.TextXAlignment = Enum.TextXAlignment.Left
         end
 
+        -- INPUT (TextBox)
+        function Elements:CreateInput(text, placeholder, callback)
+            local elementData = {name = text, value = ""}
+            
+            local InputFrame = Instance.new("Frame", Page)
+            InputFrame.Size = UDim2.new(1, -5, 0, 35)
+            InputFrame.BackgroundColor3 = Color3.fromRGB(22, 22, 22)
+            Corner(InputFrame, 6)
+            
+            local Lbl = Instance.new("TextLabel", InputFrame)
+            Lbl.Size = UDim2.new(0, 80, 1, 0)
+            Lbl.Position = UDim2.new(0, 10, 0, 0)
+            Lbl.BackgroundTransparency = 1
+            Lbl.Text = text
+            Lbl.TextColor3 = Color3.new(1, 1, 1)
+            Lbl.Font = Enum.Font.Gotham
+            Lbl.TextSize = 10
+            Lbl.TextXAlignment = Enum.TextXAlignment.Left
+            
+            local Input = Instance.new("TextBox", InputFrame)
+            Input.Size = UDim2.new(1, -100, 0, 25)
+            Input.Position = UDim2.new(0, 85, 0.5, -12)
+            Input.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+            Input.Text = ""
+            Input.TextColor3 = Color3.new(1, 1, 1)
+            Input.Font = Enum.Font.Gotham
+            Input.TextSize = 10
+            Input.PlaceholderText = placeholder or ""
+            Input.PlaceholderColor3 = Color3.fromRGB(150, 150, 150)
+            Corner(Input, 4)
+            
+            Input.FocusLost:Connect(function()
+                elementData.value = Input.Text
+                callback(Input.Text)
+            end)
+
+            table.insert(ConfigManager.Callbacks, function()
+                return {name = text, value = Input.Text}
+            end)
+            table.insert(ConfigManager.LoadCallbacks, function(config)
+                local data = config[text]
+                if data ~= nil then
+                    Input.Text = data
+                    elementData.value = data
+                    callback(data)
+                end
+            end)
+        end
+
         -- DROPDOWN
         function Elements:CreateDropdown(text, list, callback)
             local selected = list[1] or ""
-            local dropOpen = false
             
             local DropFrame = Instance.new("Frame", Page)
             DropFrame.Size = UDim2.new(1, -5, 0, 35)
@@ -726,8 +449,10 @@ function Library:CreateWindow(title)
             DropList.Size = UDim2.fromOffset(250, 0)
             DropList.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
             DropList.Visible = false
-            DropList.ZIndex = 10
+            DropList.ZIndex = 6000
             Corner(DropList, 8)
+            Instance.new("UIStroke", DropList).Color = Color3.fromRGB(0, 150, 255)
+            Instance.new("UIStroke", DropList).Thickness = 1.5
             
             local ScrollFrame = Instance.new("ScrollingFrame", DropList)
             ScrollFrame.Size = UDim2.new(1, -10, 1, -10)
@@ -737,10 +462,11 @@ function Library:CreateWindow(title)
             ScrollFrame.ScrollBarImageColor3 = Color3.fromRGB(0, 150, 255)
             ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
             ScrollFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
-            ScrollFrame.ScrollingDirection = Enum.ScrollingDirection.Y
             
             local ListLayout = Instance.new("UIListLayout", ScrollFrame)
             ListLayout.Padding = UDim.new(0, 3)
+            
+            local dropOpen = false
             
             local function updateList()
                 for _, v in pairs(ScrollFrame:GetChildren()) do
@@ -767,46 +493,29 @@ function Library:CreateWindow(title)
                         callback(selected)
                         updateList()
                     end)
-                    
-                    ItemBtn.MouseEnter:Connect(function()
-                        if selected ~= item then
-                            ItemBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-                        end
-                    end)
-                    ItemBtn.MouseLeave:Connect(function()
-                        if selected ~= item then
-                            ItemBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-                        end
-                    end)
                 end
                 
                 DropList.Size = UDim2.fromOffset(250, math.min(#list * 31 + 10, 200))
             end
             
             DropBtn.MouseButton1Click:Connect(function()
-                if not IsPickerOpen then
-                    dropOpen = not dropOpen
-                    DropList.Position = UDim2.fromOffset(DropBtn.AbsolutePosition.X, DropBtn.AbsolutePosition.Y + 35)
-                    DropList.Visible = dropOpen
-                    Arrow.Rotation = dropOpen and 180 or 0
-                    if dropOpen then
-                        updateList()
-                    end
-                end
+                dropOpen = not dropOpen
+                DropList.Position = UDim2.fromOffset(DropBtn.AbsolutePosition.X, DropBtn.AbsolutePosition.Y + 35)
+                DropList.Visible = dropOpen
+                Arrow.Rotation = dropOpen and 180 or 0
+                if dropOpen then updateList() end
             end)
             
             UIS.InputBegan:Connect(function(input)
-                if dropOpen and input.UserInputType == Enum.UserInputType.MouseButton1 then
+                if dropOpen and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
                     local pos = input.Position
                     local listPos = DropList.AbsolutePosition
                     local listSize = DropList.AbsoluteSize
                     local btnPos = DropBtn.AbsolutePosition
                     local btnSize = DropBtn.AbsoluteSize
                     
-                    if (pos.X < listPos.X or pos.X > listPos.X + listSize.X or 
-                        pos.Y < listPos.Y or pos.Y > listPos.Y + listSize.Y) and
-                       (pos.X < btnPos.X or pos.X > btnPos.X + btnSize.X or
-                        pos.Y < btnPos.Y or pos.Y > btnPos.Y + btnSize.Y) then
+                    if (pos.X < listPos.X or pos.X > listPos.X + listSize.X or pos.Y < listPos.Y or pos.Y > listPos.Y + listSize.Y) and
+                       (pos.X < btnPos.X or pos.X > btnPos.X + btnSize.X or pos.Y < btnPos.Y or pos.Y > btnPos.Y + btnSize.Y) then
                         DropList.Visible = false
                         dropOpen = false
                         Arrow.Rotation = 0
@@ -842,16 +551,12 @@ function Library:CreateWindow(title)
                 for name, _ in pairs(ConfigManager:GetConfigs()) do
                     table.insert(configs, name)
                 end
-                if #configs == 0 then
-                    configs = {"default"}
-                end
+                if #configs == 0 then configs = {"default"} end
                 return configs
             end
             
             local function rebuildDropdown()
-                if configDropdown then
-                    configDropdown.Destroy()
-                end
+                if configDropdown then configDropdown.Destroy() end
                 configDropdown = Elements:CreateDropdown("Config", getConfigList(), function(selected)
                     ConfigManager:LoadConfig(selected)
                     lastLoaded = selected
@@ -867,8 +572,9 @@ function Library:CreateWindow(title)
                 inputFrame.Size = UDim2.fromOffset(250, 100)
                 inputFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
                 inputFrame.Position = UDim2.new(0.5, -125, 0.5, -50)
-                inputFrame.ZIndex = 10
+                inputFrame.ZIndex = 7000
                 Corner(inputFrame, 8)
+                Instance.new("UIStroke", inputFrame).Color = Color3.fromRGB(45, 45, 45)
                 
                 local title = Instance.new("TextLabel", inputFrame)
                 title.Size = UDim2.new(1, 0, 0, 25)
@@ -913,12 +619,11 @@ function Library:CreateWindow(title)
                 
                 local closeConnection
                 closeConnection = UIS.InputBegan:Connect(function(inp)
-                    if inp.UserInputType == Enum.UserInputType.MouseButton1 then
+                    if inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch then
                         local pos = inp.Position
                         local framePos = inputFrame.AbsolutePosition
                         local frameSize = inputFrame.AbsoluteSize
-                        if (pos.X < framePos.X or pos.X > framePos.X + frameSize.X or 
-                            pos.Y < framePos.Y or pos.Y > framePos.Y + frameSize.Y) then
+                        if (pos.X < framePos.X or pos.X > framePos.X + frameSize.X or pos.Y < framePos.Y or pos.Y > framePos.Y + frameSize.Y) then
                             inputFrame:Destroy()
                             closeConnection:Disconnect()
                         end
@@ -948,4 +653,3 @@ function Library:CreateWindow(title)
 end
 
 return Library
--- new
