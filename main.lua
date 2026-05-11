@@ -1,6 +1,5 @@
---// POTATO UI V4.8 (CLASSIC STYLE + STABLE PICKER + CONFIG TAB) - FINAL FIX
+--// POTATO UI V4.8 (CLASSIC STYLE + STABLE PICKER + CONFIG TAB) - NO BAN VERSION
 local UIS = game:GetService("UserInputService")
-local TS = game:GetService("TweenService")
 local CoreGui = game:GetService("CoreGui")
 local Player = game:GetService("Players").LocalPlayer
 local HttpService = game:GetService("HttpService")
@@ -8,10 +7,6 @@ local HttpService = game:GetService("HttpService")
 -- Удаление старых версий
 for _, v in pairs(CoreGui:GetChildren()) do
     if v.Name == "Potato_V4" or v.Name == "PotatoToggleUI" then v:Destroy() end
-end
-
-local function Tween(obj, t, props)
-    TS:Create(obj, TweenInfo.new(t, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), props):Play()
 end
 
 local function Corner(obj, r)
@@ -87,15 +82,6 @@ function Library:CreateWindow(title)
     UI.Name = "Potato_V4"
     UI.Parent = CoreGui
     UI.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    
-    local CameraBlocker = Instance.new("Frame")
-CameraBlocker.Name = "CameraBlocker"
-CameraBlocker.Size = UDim2.new(1, 0, 1, 0)
-CameraBlocker.BackgroundTransparency = 1
-CameraBlocker.Visible = false
-CameraBlocker.ZIndex = 1
-CameraBlocker.Parent = UI
--- Active = true --- УДАЛИЛ, ЭТО БАНИЛО
 
     local ToggleScreen = Instance.new("ScreenGui")
     ToggleScreen.Name = "PotatoToggleUI"
@@ -254,7 +240,7 @@ CameraBlocker.Parent = UI
         local Elements = {}
         local elementStorage = {}
 
-        -- COLOR PICKER
+        -- COLOR PICKER (БЕЗОПАСНАЯ ВЕРСИЯ - БЕЗ UISTROKE, БЕЗ CAMERABLOCKER, НИЗКИЙ ZINDEX)
         function Elements:CreateColor(text, default, callback)
             local h, s, v = default:ToHSV()
             local elementData = {name = text, value = {h = h, s = s, v = v}}
@@ -287,9 +273,9 @@ CameraBlocker.Parent = UI
             Picker.Size = UDim2.fromOffset(190, 230)
             Picker.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
             Picker.Visible = false
-            Picker.ZIndex = 5000
+            Picker.ZIndex = 1  -- НИЗКИЙ ZIndex, НЕ БАНИТ
             Corner(Picker, 10)
-            Instance.new("UIStroke", Picker).Color = Color3.fromRGB(45, 45, 45)
+            -- UIStroke УДАЛЕН
 
             local Sat = Instance.new("ImageLabel", Picker)
             Sat.Size = UDim2.fromOffset(140, 130)
@@ -340,7 +326,6 @@ CameraBlocker.Parent = UI
                 )
                 Picker.Visible = not Picker.Visible
                 IsPickerOpen = Picker.Visible
-                CameraBlocker.Visible = IsPickerOpen
                 if IsPickerOpen then
                     update()
                 end
@@ -363,7 +348,6 @@ CameraBlocker.Parent = UI
                 end)
                 Picker.Visible = false
                 IsPickerOpen = false
-                CameraBlocker.Visible = false
             end)
 
             local psat, phue = false, false
@@ -396,7 +380,20 @@ CameraBlocker.Parent = UI
                 phue = false 
             end)
 
-           
+            -- Закрытие пикера при клике вне его
+            UIS.InputBegan:Connect(function(input)
+                if IsPickerOpen and Picker.Visible and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
+                    local pos = input.Position
+                    local pickerPos = Picker.AbsolutePosition
+                    local pickerSize = Picker.AbsoluteSize
+                    
+                    if not (pos.X >= pickerPos.X and pos.X <= pickerPos.X + pickerSize.X and 
+                            pos.Y >= pickerPos.Y and pos.Y <= pickerPos.Y + pickerSize.Y) then
+                        Picker.Visible = false
+                        IsPickerOpen = false
+                    end
+                end
+            end)
 
             table.insert(ConfigManager.Callbacks, function()
                 return {name = text, value = elementData.value}
@@ -412,7 +409,7 @@ CameraBlocker.Parent = UI
             table.insert(elementStorage, elementData)
         end
 
-        -- TOGGLE
+        -- TOGGLE (БЕЗ TWEEN)
         function Elements:CreateToggle(text, callback)
             local enabled = false
             local elementData = {name = text, value = enabled}
@@ -443,7 +440,7 @@ CameraBlocker.Parent = UI
                 if not IsPickerOpen then
                     enabled = not enabled
                     elementData.value = enabled
-                    Tween(Check, 0.2, {BackgroundColor3 = enabled and Color3.fromRGB(0, 150, 255) or Color3.fromRGB(40, 40, 40)})
+                    Check.BackgroundColor3 = enabled and Color3.fromRGB(0, 150, 255) or Color3.fromRGB(40, 40, 40)
                     callback(enabled)
                 end
             end)
@@ -566,7 +563,7 @@ CameraBlocker.Parent = UI
             Lbl.TextXAlignment = Enum.TextXAlignment.Left
         end
 
-        -- DROPDOWN (КРАСИВЫЙ)
+        -- DROPDOWN (БЕЗ TWEEN, БЕЗ UISTROKE)
         function Elements:CreateDropdown(text, list, callback)
             local selected = list[1] or ""
             local dropOpen = false
@@ -585,7 +582,6 @@ CameraBlocker.Parent = UI
             DropBtn.TextXAlignment = Enum.TextXAlignment.Left
             Corner(DropBtn, 6)
             
-            -- Стрелка
             local Arrow = Instance.new("TextLabel", DropBtn)
             Arrow.Size = UDim2.fromOffset(20, 20)
             Arrow.Position = UDim2.new(1, -25, 0.5, -10)
@@ -600,10 +596,9 @@ CameraBlocker.Parent = UI
             DropList.Size = UDim2.fromOffset(250, 0)
             DropList.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
             DropList.Visible = false
-            DropList.ZIndex = 6000
+            DropList.ZIndex = 1  -- НИЗКИЙ ZIndex
             Corner(DropList, 8)
-            Instance.new("UIStroke", DropList).Color = Color3.fromRGB(0, 150, 255)
-            Instance.new("UIStroke", DropList).Thickness = 1.5
+            -- UIStroke УДАЛЕН
             
             local ScrollFrame = Instance.new("ScrollingFrame", DropList)
             ScrollFrame.Size = UDim2.new(1, -10, 1, -10)
@@ -644,14 +639,15 @@ CameraBlocker.Parent = UI
                         updateList()
                     end)
                     
+                    -- БЕЗ TWEEN
                     ItemBtn.MouseEnter:Connect(function()
                         if selected ~= item then
-                            Tween(ItemBtn, 0.15, {BackgroundColor3 = Color3.fromRGB(40, 40, 40)})
+                            ItemBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
                         end
                     end)
                     ItemBtn.MouseLeave:Connect(function()
                         if selected ~= item then
-                            Tween(ItemBtn, 0.15, {BackgroundColor3 = Color3.fromRGB(30, 30, 30)})
+                            ItemBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
                         end
                     end)
                 end
@@ -693,7 +689,6 @@ CameraBlocker.Parent = UI
                 end
             end)
             
-            -- Возвращаем ТОЛЬКО ФУНКЦИИ, не таблицу с Destroy
             local dropdownController = {}
             function dropdownController.SetValue(value)
                 selected = value
@@ -747,9 +742,9 @@ CameraBlocker.Parent = UI
                 inputFrame.Size = UDim2.fromOffset(250, 100)
                 inputFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
                 inputFrame.Position = UDim2.new(0.5, -125, 0.5, -50)
-                inputFrame.ZIndex = 7000
+                inputFrame.ZIndex = 1  -- НИЗКИЙ ZIndex
                 Corner(inputFrame, 8)
-                Instance.new("UIStroke", inputFrame).Color = Color3.fromRGB(45, 45, 45)
+                -- UIStroke УДАЛЕН
                 
                 local title = Instance.new("TextLabel", inputFrame)
                 title.Size = UDim2.new(1, 0, 0, 25)
@@ -817,7 +812,6 @@ CameraBlocker.Parent = UI
             
             rebuildDropdown()
             
-            -- Авто-загрузка
             if ConfigManager.Configs[ConfigManager.CurrentConfig] then
                 ConfigManager:LoadConfig(ConfigManager.CurrentConfig)
             end
@@ -829,3 +823,4 @@ CameraBlocker.Parent = UI
     return Tabs
 end
 return Library
+-- neww
