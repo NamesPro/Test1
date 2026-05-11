@@ -274,7 +274,7 @@ function Library:CreateWindow(title)
             Corner(Box, 4)
 
             local Picker = Instance.new("Frame")
-            Picker.Parent = HiddenGui
+            Picker.Parent = UI
             Picker.Size = UDim2.fromOffset(190, 230)
             Picker.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
             Picker.Visible = false
@@ -595,7 +595,7 @@ function Library:CreateWindow(title)
             Arrow.TextSize = 14
             
             local DropList = Instance.new("Frame")
-            DropList.Parent = HiddenGui
+            DropList.Parent = UI
             DropList.Size = UDim2.fromOffset(250, 0)
             DropList.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
             DropList.Visible = false
@@ -739,7 +739,7 @@ function Library:CreateWindow(title)
             
             Elements:CreateButton("Save Config", function()
                 local inputFrame = Instance.new("Frame")
-                inputFrame.Parent = HiddenGui
+                inputFrame.Parent = UI
                 inputFrame.Size = UDim2.fromOffset(250, 100)
                 inputFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
                 inputFrame.Position = UDim2.new(0.5, -125, 0.5, -50)
@@ -823,3 +823,4 @@ function Library:CreateWindow(title)
     return Tabs
 end
 return Library
+--new
