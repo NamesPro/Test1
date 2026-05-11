@@ -89,13 +89,13 @@ function Library:CreateWindow(title)
     UI.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     
     local CameraBlocker = Instance.new("Frame")
-    CameraBlocker.Name = "CameraBlocker"
-    CameraBlocker.Size = UDim2.new(1, 0, 1, 0)
-    CameraBlocker.BackgroundTransparency = 1
-    CameraBlocker.Visible = false
-    CameraBlocker.ZIndex = 4000
-    CameraBlocker.Parent = UI
-    CameraBlocker.Active = true
+CameraBlocker.Name = "CameraBlocker"
+CameraBlocker.Size = UDim2.new(1, 0, 1, 0)
+CameraBlocker.BackgroundTransparency = 1
+CameraBlocker.Visible = false
+CameraBlocker.ZIndex = 1
+CameraBlocker.Parent = UI
+-- Active = true --- УДАЛИЛ, ЭТО БАНИЛО
 
     local ToggleScreen = Instance.new("ScreenGui")
     ToggleScreen.Name = "PotatoToggleUI"
@@ -396,22 +396,7 @@ function Library:CreateWindow(title)
                 phue = false 
             end)
 
-            CameraBlocker.InputBegan:Connect(function(input)
-                if IsPickerOpen and Picker.Visible then
-                    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                        local pos = input.Position
-                        local pickerPos = Picker.AbsolutePosition
-                        local pickerSize = Picker.AbsoluteSize
-                        
-                        if (pos.X < pickerPos.X or pos.X > pickerPos.X + pickerSize.X or 
-                            pos.Y < pickerPos.Y or pos.Y > pickerPos.Y + pickerSize.Y) then
-                            Picker.Visible = false
-                            IsPickerOpen = false
-                            CameraBlocker.Visible = false
-                        end
-                    end
-                end
-            end)
+           
 
             table.insert(ConfigManager.Callbacks, function()
                 return {name = text, value = elementData.value}
