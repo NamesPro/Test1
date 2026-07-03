@@ -1,4 +1,4 @@
---// POTATO UI V4.8(2) (CLASSIC STYLE + STABLE PICKER + CONFIG TAB + INPUT)
+--// POTATO UI V4.8(2.1) (CLASSIC STYLE + STABLE PICKER + CONFIG TAB + INPUT)
 local UIS = game:GetService("UserInputService")
 local TS = game:GetService("TweenService")
 local CoreGui = game:GetService("CoreGui")
@@ -152,7 +152,7 @@ CameraBlocker.Parent = UI
             dragging = true
             dragStart = input.Position
             startPos = Main.Position
-            CameraBlocker.Visible = IsPickerOpen
+            CameraBlocker.Visible = true
         end
     end)
     UIS.InputChanged:Connect(function(input)
@@ -515,7 +515,7 @@ end)
                 )
                 Picker.Visible = not Picker.Visible
                 IsPickerOpen = Picker.Visible
-                CameraBlocker.Visible = IsPickerOpen
+                CameraBlocker.Visible = true
                 if IsPickerOpen then update() end
             end
 
