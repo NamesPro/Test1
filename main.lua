@@ -1,4 +1,4 @@
---// POTATO UI V4.9(1) (CLASSIC STYLE + STABLE PICKER + CONFIG TAB + INPUT)
+--// POTATO UI V4.9(2) (CLASSIC STYLE + STABLE PICKER + CONFIG TAB + INPUT)
 local UIS = game:GetService("UserInputService")
 local TS = game:GetService("TweenService")
 local CoreGui = game:GetService("CoreGui")
@@ -748,6 +748,39 @@ function Library:CreateWindow(title)
             function dropdownController.Destroy()
                 DropFrame:Destroy()
                 DropList:Destroy()
+            end
+            function dropdownController.SetItems(newList)
+                list = newList
+                if #list > 0 then
+                    if not table.find(list, selected) then
+                        selected = list[1]
+                    end
+                else
+                    selected = ""
+                end
+                DropBtn.Text = "▼  " .. tostring(selected)
+                callback(selected)
+                updateList()
+            end
+            function dropdownController.AddItem(item)
+                if not table.find(list, item) then
+                    table.insert(list, item)
+                    updateList()
+                end
+            end
+            function dropdownController.RemoveItem(item)
+                for i, v in ipairs(list) do
+                    if v == item then
+                        table.remove(list, i)
+                        if selected == item then
+                            selected = list[1] or ""
+                            DropBtn.Text = "▼  " .. tostring(selected)
+                            callback(selected)
+                        end
+                        updateList()
+                        break
+                    end
+                end
             end
             
             return dropdownController
