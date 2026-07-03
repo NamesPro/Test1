@@ -1,4 +1,4 @@
---// POTATO UI V4.8(2.1) (CLASSIC STYLE + STABLE PICKER + CONFIG TAB + INPUT)
+--// POTATO UI V4.9 (CLASSIC STYLE + STABLE PICKER + CONFIG TAB + INPUT)
 local UIS = game:GetService("UserInputService")
 local TS = game:GetService("TweenService")
 local CoreGui = game:GetService("CoreGui")
@@ -79,13 +79,6 @@ function Library:CreateWindow(title)
     UI.Name = "Potato_V4"
     UI.Parent = CoreGui
     UI.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-local CameraBlocker = Instance.new("Frame")
-CameraBlocker.Size = UDim2.new(1, 0, 1, 0)
-CameraBlocker.BackgroundTransparency = 1
-CameraBlocker.Visible = false
-CameraBlocker.ZIndex = 1
-CameraBlocker.Active = true
-CameraBlocker.Parent = UI
     
     local ToggleScreen = Instance.new("ScreenGui")
     ToggleScreen.Name = "PotatoToggleUI"
@@ -146,13 +139,18 @@ CameraBlocker.Parent = UI
         OpenBtn.Visible = false
     end)
 
+    -- ДРАГ С ФИКСОМ КАМЕРЫ
     local dragging, dragStart, startPos
     Header.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = true
             dragStart = input.Position
             startPos = Main.Position
-            CameraBlocker.Visible = true
+            
+            -- Фикс камеры: замораживаем её положение
+            if workspace.CurrentCamera then
+                workspace.CurrentCamera.CameraType = Enum.CameraType.Scriptable
+            end
         end
     end)
     UIS.InputChanged:Connect(function(input)
@@ -161,10 +159,17 @@ CameraBlocker.Parent = UI
             Main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
         end
     end)
-    UIS.InputEnded:Connect(function()
-        dragging = false 
-        CameraBlocker.Visible = false
-end)
+    UIS.InputEnded:Connect(function(input)
+        -- Проверяем, что завершился именно нужный тип ввода
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
+            
+            -- Фикс камеры: возвращаем управление игроку
+            if workspace.CurrentCamera then
+                workspace.CurrentCamera.CameraType = Enum.CameraType.Custom
+            end
+        end
+    end)
 
     local Sidebar = Instance.new("Frame")
     Sidebar.Parent = Main
@@ -429,7 +434,7 @@ end)
         end
 
 
--- COLOR PICKER
+        -- COLOR PICKER (С ФИКСОМ КАМЕРЫ)
         function Elements:CreateColor(text, default, callback)
             local h, s, v = default:ToHSV()
             local elementData = {name = text, value = {h = h, s = s, v = v}}
@@ -515,7 +520,9 @@ end)
                 )
                 Picker.Visible = not Picker.Visible
                 IsPickerOpen = Picker.Visible
-                CameraBlocker.Visible = true
+                if workspace.CurrentCamera then
+                    workspace.CurrentCamera.CameraType = IsPickerOpen and Enum.CameraType.Scriptable or Enum.CameraType.Custom
+                end
                 if IsPickerOpen then update() end
             end
 
@@ -534,15 +541,23 @@ end)
                 end)
                 Picker.Visible = false
                 IsPickerOpen = false
-                CameraBlocker.Visible = false
+                if workspace.CurrentCamera then
+                    workspace.CurrentCamera.CameraType = Enum.CameraType.Custom
+                end
             end)
 
             local psat, phue = false, false
             Sat.InputBegan:Connect(function(i) 
-                if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then psat = true end 
+                if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then 
+                    psat = true 
+                    if workspace.CurrentCamera then workspace.CurrentCamera.CameraType = Enum.CameraType.Scriptable end
+                end 
             end)
             Hue.InputBegan:Connect(function(i) 
-                if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then phue = true end 
+                if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then 
+                    phue = true 
+                    if workspace.CurrentCamera then workspace.CurrentCamera.CameraType = Enum.CameraType.Scriptable end
+                end 
             end)
             
             UIS.InputChanged:Connect(function(i)
@@ -558,7 +573,15 @@ end)
                 end
             end)
             
-            UIS.InputEnded:Connect(function() psat = false; phue = false end)
+            UIS.InputEnded:Connect(function(i) 
+                if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+                    if psat or phue then
+                        psat = false
+                        phue = false 
+                        if workspace.CurrentCamera then workspace.CurrentCamera.CameraType = Enum.CameraType.Custom end
+                    end
+                end
+            end)
 
             UIS.InputBegan:Connect(function(input)
                 if IsPickerOpen and Picker.Visible then
@@ -569,7 +592,7 @@ end)
                         if pos.X < pp.X or pos.X > pp.X + ps.X or pos.Y < pp.Y or pos.Y > pp.Y + ps.Y then
                             Picker.Visible = false
                             IsPickerOpen = false
-                            CameraBlocker.Visible = false
+                            if workspace.CurrentCamera then workspace.CurrentCamera.CameraType = Enum.CameraType.Custom end
                         end
                     end
                 end
@@ -583,6 +606,7 @@ end)
                 if data then h, s, v = data.h, data.s, data.v; update() end
             end)
         end
+
         -- DROPDOWN
         function Elements:CreateDropdown(text, list, callback)
             local selected = list[1] or ""
