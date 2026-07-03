@@ -1,4 +1,4 @@
---// POTATO UI V4.9(2) (CLASSIC STYLE + STABLE PICKER + CONFIG TAB + INPUT)
+--// POTATO UI V4.9(2.1) (CLASSIC STYLE + STABLE PICKER + CONFIG TAB + INPUT)
 local UIS = game:GetService("UserInputService")
 local TS = game:GetService("TweenService")
 local CoreGui = game:GetService("CoreGui")
@@ -782,6 +782,9 @@ function Library:CreateWindow(title)
                     end
                 end
             end
+function dropdownController.GetItems()
+    return list
+end
             
             return dropdownController
         end
