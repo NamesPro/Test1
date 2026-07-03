@@ -1,4 +1,4 @@
---// POTATO UI V4.9 (CLASSIC STYLE + STABLE PICKER + CONFIG TAB + INPUT)
+--// POTATO UI V4.9(1) (CLASSIC STYLE + STABLE PICKER + CONFIG TAB + INPUT)
 local UIS = game:GetService("UserInputService")
 local TS = game:GetService("TweenService")
 local CoreGui = game:GetService("CoreGui")
@@ -22,6 +22,18 @@ end
 local ConfigManager = {}
 ConfigManager.Configs = {}
 ConfigManager.CurrentConfig = "default"
+ConfigManager.GameName = "default_game"
+
+function ConfigManager:SetGameName(name)
+    self.GameName = name
+    self.Configs = {}
+    self.CurrentConfig = "default"
+    pcall(function()
+        if isfile and isfile("PotatoUI_" .. name .. ".json") then
+            self.Configs = HttpService:JSONDecode(readfile("PotatoUI_" .. name .. ".json"))
+        end
+    end)
+end
 
 function ConfigManager:SaveConfig(name)
     local config = {}
@@ -34,7 +46,7 @@ function ConfigManager:SaveConfig(name)
     self.Configs[name] = config
     self.CurrentConfig = name
     pcall(function()
-        writefile("PotatoUI_Configs.json", HttpService:JSONEncode(self.Configs))
+        writefile("PotatoUI_" .. self.GameName .. ".json", HttpService:JSONEncode(self.Configs))
     end)
     return true
 end
@@ -53,7 +65,7 @@ function ConfigManager:DeleteConfig(name)
     if name == "default" then return false end
     self.Configs[name] = nil
     pcall(function()
-        writefile("PotatoUI_Configs.json", HttpService:JSONEncode(self.Configs))
+        writefile("PotatoUI_" .. self.GameName .. ".json", HttpService:JSONEncode(self.Configs))
     end)
     return true
 end
@@ -62,17 +74,15 @@ function ConfigManager:GetConfigs()
     return self.Configs
 end
 
-pcall(function()
-    if isfile and isfile("PotatoUI_Configs.json") then
-        ConfigManager.Configs = HttpService:JSONDecode(readfile("PotatoUI_Configs.json"))
-    end
-end)
-
 ConfigManager.Callbacks = {}
 ConfigManager.LoadCallbacks = {}
 
 local Library = {}
 local IsPickerOpen = false
+
+function Library:SetGame(name)
+    ConfigManager:SetGameName(name)
+end
 
 function Library:CreateWindow(title)
     local UI = Instance.new("ScreenGui")
@@ -179,6 +189,7 @@ function Library:CreateWindow(title)
     
     local SidebarList = Instance.new("UIListLayout")
     SidebarList.Padding = UDim.new(0, 5)
+    SidebarList.SortOrder = Enum.SortOrder.LayoutOrder
     SidebarList.Parent = Sidebar
 
     local Container = Instance.new("Frame")
@@ -189,8 +200,10 @@ function Library:CreateWindow(title)
     Container.ClipsDescendants = true
 
     local Tabs = {First = true}
+    local elementOrder = 0
 
     function Tabs:CreateTab(name)
+        elementOrder = 0
         local Page = Instance.new("ScrollingFrame")
         Page.Parent = Container
         Page.Size = UDim2.new(1, -5, 1, 0)
@@ -205,6 +218,7 @@ function Library:CreateWindow(title)
         
         local PageList = Instance.new("UIListLayout")
         PageList.Padding = UDim.new(0, 5)
+        PageList.SortOrder = Enum.SortOrder.LayoutOrder
         PageList.Parent = Page
 
         local TabBtn = Instance.new("TextButton")
@@ -215,6 +229,7 @@ function Library:CreateWindow(title)
         TabBtn.TextColor3 = Color3.fromRGB(150, 150, 150)
         TabBtn.Font = Enum.Font.GothamMedium
         TabBtn.TextSize = 11
+        TabBtn.LayoutOrder = elementOrder; elementOrder = elementOrder + 1
         Corner(TabBtn, 6)
 
         TabBtn.MouseButton1Click:Connect(function()
@@ -251,6 +266,7 @@ function Library:CreateWindow(title)
             Item.Size = UDim2.new(1, -5, 0, 35)
             Item.BackgroundColor3 = Color3.fromRGB(22, 22, 22)
             Item.Text = ""
+            Item.LayoutOrder = elementOrder; elementOrder = elementOrder + 1
             Corner(Item, 6)
             
             local Lbl = Instance.new("TextLabel", Item)
@@ -298,6 +314,7 @@ function Library:CreateWindow(title)
             local SFrame = Instance.new("Frame", Page)
             SFrame.Size = UDim2.new(1, -5, 0, 45)
             SFrame.BackgroundColor3 = Color3.fromRGB(22, 22, 22)
+            SFrame.LayoutOrder = elementOrder; elementOrder = elementOrder + 1
             Corner(SFrame, 6)
             
             local Lbl = Instance.new("TextLabel", SFrame)
@@ -367,6 +384,7 @@ function Library:CreateWindow(title)
             Btn.TextColor3 = Color3.new(1, 1, 1)
             Btn.Font = Enum.Font.GothamBold
             Btn.TextSize = 11
+            Btn.LayoutOrder = elementOrder; elementOrder = elementOrder + 1
             Corner(Btn, 6)
             
             Btn.MouseButton1Click:Connect(function() callback() end)
@@ -382,6 +400,7 @@ function Library:CreateWindow(title)
             Lbl.Font = Enum.Font.Gotham
             Lbl.TextSize = 11
             Lbl.TextXAlignment = Enum.TextXAlignment.Left
+            Lbl.LayoutOrder = elementOrder; elementOrder = elementOrder + 1
         end
 
         -- INPUT (TextBox)
@@ -391,6 +410,7 @@ function Library:CreateWindow(title)
             local InputFrame = Instance.new("Frame", Page)
             InputFrame.Size = UDim2.new(1, -5, 0, 35)
             InputFrame.BackgroundColor3 = Color3.fromRGB(22, 22, 22)
+            InputFrame.LayoutOrder = elementOrder; elementOrder = elementOrder + 1
             Corner(InputFrame, 6)
             
             local Lbl = Instance.new("TextLabel", InputFrame)
@@ -444,6 +464,7 @@ function Library:CreateWindow(title)
             Item.Size = UDim2.new(1, -5, 0, 35)
             Item.BackgroundColor3 = Color3.fromRGB(22, 22, 22)
             Item.Text = ""
+            Item.LayoutOrder = elementOrder; elementOrder = elementOrder + 1
             Corner(Item, 6)
 
             local Lbl = Instance.new("TextLabel", Item)
@@ -614,6 +635,7 @@ function Library:CreateWindow(title)
             local DropFrame = Instance.new("Frame", Page)
             DropFrame.Size = UDim2.new(1, -5, 0, 35)
             DropFrame.BackgroundTransparency = 1
+            DropFrame.LayoutOrder = elementOrder; elementOrder = elementOrder + 1
             
             local DropBtn = Instance.new("TextButton", DropFrame)
             DropBtn.Size = UDim2.new(1, 0, 0, 35)
