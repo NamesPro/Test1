@@ -1,4 +1,4 @@
---// POTATO UI V4.8 (CLASSIC STYLE + STABLE PICKER + CONFIG TAB + INPUT)
+--// POTATO UI V4.8(1) (CLASSIC STYLE + STABLE PICKER + CONFIG TAB + INPUT)
 local UIS = game:GetService("UserInputService")
 local TS = game:GetService("TweenService")
 local CoreGui = game:GetService("CoreGui")
@@ -417,6 +417,158 @@ function Library:CreateWindow(title)
             end)
         end
 
+
+-- COLOR PICKER
+        function Elements:CreateColor(text, default, callback)
+            local h, s, v = default:ToHSV()
+            local elementData = {name = text, value = {h = h, s = s, v = v}}
+            
+            local Item = Instance.new("TextButton")
+            Item.Parent = Page
+            Item.Size = UDim2.new(1, -5, 0, 35)
+            Item.BackgroundColor3 = Color3.fromRGB(22, 22, 22)
+            Item.Text = ""
+            Corner(Item, 6)
+
+            local Lbl = Instance.new("TextLabel", Item)
+            Lbl.Size = UDim2.new(1, -50, 1, 0)
+            Lbl.Position = UDim2.new(0, 10, 0, 0)
+            Lbl.BackgroundTransparency = 1
+            Lbl.Text = text
+            Lbl.TextColor3 = Color3.new(1, 1, 1)
+            Lbl.Font = Enum.Font.Gotham
+            Lbl.TextSize = 11
+            Lbl.TextXAlignment = Enum.TextXAlignment.Left
+
+            local Box = Instance.new("Frame", Item)
+            Box.Size = UDim2.fromOffset(20, 20)
+            Box.Position = UDim2.new(1, -35, 0.5, -10)
+            Box.BackgroundColor3 = default
+            Corner(Box, 4)
+
+            local Picker = Instance.new("Frame")
+            Picker.Parent = UI
+            Picker.Size = UDim2.fromOffset(190, 230)
+            Picker.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+            Picker.Visible = false
+            Picker.ZIndex = 5000
+            Corner(Picker, 10)
+            Instance.new("UIStroke", Picker).Color = Color3.fromRGB(45, 45, 45)
+
+            local Sat = Instance.new("ImageLabel", Picker)
+            Sat.Size = UDim2.fromOffset(140, 130)
+            Sat.Position = UDim2.fromOffset(10, 10)
+            Sat.Image = "rbxassetid://4155801252"
+            Sat.BackgroundColor3 = Color3.fromHSV(h, 1, 1)
+            Corner(Sat, 4)
+
+            local Hue = Instance.new("ImageLabel", Picker)
+            Hue.Size = UDim2.fromOffset(20, 130)
+            Hue.Position = UDim2.fromOffset(160, 10)
+            Hue.Image = "rbxassetid://3641079629"
+            Corner(Hue, 4)
+
+            local Input = Instance.new("TextBox", Picker)
+            Input.Size = UDim2.new(0, 170, 0, 30)
+            Input.Position = UDim2.new(0, 10, 0, 150)
+            Input.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+            Input.Text = "255, 255, 255"
+            Input.TextColor3 = Color3.new(1, 1, 1)
+            Input.Font = Enum.Font.Gotham
+            Input.TextSize = 10
+            Corner(Input, 4)
+
+            local Apply = Instance.new("TextButton", Picker)
+            Apply.Size = UDim2.new(0, 170, 0, 30)
+            Apply.Position = UDim2.new(0, 10, 0, 190)
+            Apply.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
+            Apply.Text = "APPLY"
+            Apply.TextColor3 = Color3.new(1, 1, 1)
+            Apply.Font = Enum.Font.GothamBold
+            Apply.TextSize = 11
+            Corner(Apply, 4)
+
+            local function update()
+                local color = Color3.fromHSV(h, s, v)
+                Box.BackgroundColor3 = color
+                Sat.BackgroundColor3 = Color3.fromHSV(h, 1, 1)
+                Input.Text = math.floor(color.R*255)..", "..math.floor(color.G*255)..", "..math.floor(color.B*255)
+                elementData.value = {h = h, s = s, v = v}
+                callback(color)
+            end
+
+            local function openPicker()
+                Picker.Position = UDim2.fromOffset(
+                    math.clamp(Item.AbsolutePosition.X + 270, 0, 1920 - 190),
+                    math.clamp(Item.AbsolutePosition.Y - 180, 0, 1080 - 230)
+                )
+                Picker.Visible = not Picker.Visible
+                IsPickerOpen = Picker.Visible
+                if IsPickerOpen then update() end
+            end
+
+            Item.MouseButton1Click:Connect(function()
+                if not IsPickerOpen then openPicker() end
+            end)
+
+            Apply.MouseButton1Click:Connect(function()
+                pcall(function()
+                    local r, g, b = Input.Text:match("(%d+),%s*(%d+),%s*(%d+)")
+                    if r then
+                        local nc = Color3.fromRGB(tonumber(r), tonumber(g), tonumber(b))
+                        h, s, v = nc:ToHSV()
+                        update()
+                    end
+                end)
+                Picker.Visible = false
+                IsPickerOpen = false
+            end)
+
+            local psat, phue = false, false
+            Sat.InputBegan:Connect(function(i) 
+                if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then psat = true end 
+            end)
+            Hue.InputBegan:Connect(function(i) 
+                if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then phue = true end 
+            end)
+            
+            UIS.InputChanged:Connect(function(i)
+                if IsPickerOpen and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
+                    if psat then
+                        s = math.clamp((i.Position.X - Sat.AbsolutePosition.X) / Sat.AbsoluteSize.X, 0, 1)
+                        v = 1 - math.clamp((i.Position.Y - Sat.AbsolutePosition.Y - 36) / Sat.AbsoluteSize.Y, 0, 1)
+                        update()
+                    elseif phue then
+                        h = 1 - math.clamp((i.Position.Y - Hue.AbsolutePosition.Y - 36) / Hue.AbsoluteSize.Y, 0, 1)
+                        update()
+                    end
+                end
+            end)
+            
+            UIS.InputEnded:Connect(function() psat = false; phue = false end)
+
+            UIS.InputBegan:Connect(function(input)
+                if IsPickerOpen and Picker.Visible then
+                    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                        local pos = input.Position
+                        local pp = Picker.AbsolutePosition
+                        local ps = Picker.AbsoluteSize
+                        if pos.X < pp.X or pos.X > pp.X + ps.X or pos.Y < pp.Y or pos.Y > pp.Y + ps.Y then
+                            Picker.Visible = false
+                            IsPickerOpen = false
+                        end
+                    end
+                end
+            end)
+
+            table.insert(ConfigManager.Callbacks, function()
+                return {name = text, value = elementData.value}
+            end)
+            table.insert(ConfigManager.LoadCallbacks, function(config)
+                local data = config[text]
+                if data then h, s, v = data.h, data.s, data.v; update() end
+            end)
+        end
         -- DROPDOWN
         function Elements:CreateDropdown(text, list, callback)
             local selected = list[1] or ""
