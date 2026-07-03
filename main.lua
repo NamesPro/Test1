@@ -1,4 +1,4 @@
---// POTATO UI V4.8(1) (CLASSIC STYLE + STABLE PICKER + CONFIG TAB + INPUT)
+--// POTATO UI V4.8(2) (CLASSIC STYLE + STABLE PICKER + CONFIG TAB + INPUT)
 local UIS = game:GetService("UserInputService")
 local TS = game:GetService("TweenService")
 local CoreGui = game:GetService("CoreGui")
@@ -79,6 +79,13 @@ function Library:CreateWindow(title)
     UI.Name = "Potato_V4"
     UI.Parent = CoreGui
     UI.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+local CameraBlocker = Instance.new("Frame")
+CameraBlocker.Size = UDim2.new(1, 0, 1, 0)
+CameraBlocker.BackgroundTransparency = 1
+CameraBlocker.Visible = false
+CameraBlocker.ZIndex = 1
+CameraBlocker.Active = true
+CameraBlocker.Parent = UI
     
     local ToggleScreen = Instance.new("ScreenGui")
     ToggleScreen.Name = "PotatoToggleUI"
@@ -145,6 +152,7 @@ function Library:CreateWindow(title)
             dragging = true
             dragStart = input.Position
             startPos = Main.Position
+            CameraBlocker.Visible = IsPickerOpen
         end
     end)
     UIS.InputChanged:Connect(function(input)
@@ -153,7 +161,10 @@ function Library:CreateWindow(title)
             Main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
         end
     end)
-    UIS.InputEnded:Connect(function() dragging = false end)
+    UIS.InputEnded:Connect(function()
+        dragging = false 
+        CameraBlocker.Visible = false
+end)
 
     local Sidebar = Instance.new("Frame")
     Sidebar.Parent = Main
@@ -504,6 +515,7 @@ function Library:CreateWindow(title)
                 )
                 Picker.Visible = not Picker.Visible
                 IsPickerOpen = Picker.Visible
+                CameraBlocker.Visible = IsPickerOpen
                 if IsPickerOpen then update() end
             end
 
@@ -522,6 +534,7 @@ function Library:CreateWindow(title)
                 end)
                 Picker.Visible = false
                 IsPickerOpen = false
+                CameraBlocker.Visible = false
             end)
 
             local psat, phue = false, false
@@ -556,6 +569,7 @@ function Library:CreateWindow(title)
                         if pos.X < pp.X or pos.X > pp.X + ps.X or pos.Y < pp.Y or pos.Y > pp.Y + ps.Y then
                             Picker.Visible = false
                             IsPickerOpen = false
+                            CameraBlocker.Visible = false
                         end
                     end
                 end
